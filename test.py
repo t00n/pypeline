@@ -3,7 +3,8 @@ from bitoduc import (
     Source,
     Sink,
     Function,
-    # Window,
+    Map,
+    Window,
     # GroupBy,
     # Resample,
 )
@@ -37,7 +38,12 @@ class PrintLolSink(Sink):
         print("LOL", row)
 
 
+def split(l):
+    for e in l:
+        yield e
+
+
 with Pipeline() as p:
     csv = p | CSVSource('test.csv')
-    csv | PrintSink()
-    csv | PrintLolSink()
+    csv | Window(5) | PrintSink()
+    csv | Function(split) | PrintLolSink()

@@ -30,6 +30,11 @@ class Function(Component):
         self.f = f
 
     def apply(self, row):
+        yield from self.f(row)
+
+
+class Map(Function):
+    def apply(self, row):
         yield self.f(row)
 
 
@@ -49,6 +54,20 @@ class Sink(Component, ABC):
     @abstractmethod
     def write(self, row):
         pass
+
+
+class Window(Component):
+    def __init__(self, window):
+        super().__init__()
+        self.window = window
+        self.memory = []
+
+    def apply(self, row):
+        if isinstance(self.window, int):
+            self.memory.append(row)
+            self.memory[-self.window:]
+            if len(self.memory) == self.window:
+                yield self.memory
 
 
 class Pipeline:
