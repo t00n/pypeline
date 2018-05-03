@@ -53,6 +53,7 @@ def split(l):
 with Pipeline() as p:
     csv = p | CSVSource('test.csv')
     # csv | Window(5) | PrintSink()
-    csv | Window(5, fixed=False) | PrintSink()
+    # csv | Window(5, fixed=False) | PrintSink()
     # csv | Function(split) | PrintLolSink()
-    # csv | Window(timedelta(seconds=4), lambda x: x[0]) | PrintYoloSink()
+    # csv | Window(timedelta(seconds=4), key=lambda x: x[0]) | PrintYoloSink()
+    csv | Window(timedelta(seconds=4,), fixed=False, key=lambda x: x[0]) | PrintYoloSink()

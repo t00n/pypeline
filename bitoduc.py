@@ -69,7 +69,7 @@ def to_datetime(d):
 
 
 class Window(Component):
-    def __init__(self, window, fixed=True, key=None):
+    def __init__(self, window, *, fixed=True, key=None):
         super().__init__()
         if isinstance(window, int) \
             or isinstance(window, timedelta) \
@@ -98,14 +98,17 @@ class Window(Component):
         elif isinstance(self.window, timedelta):
             now = to_datetime(self.get_value(row))
             watermark = now - self.window
+            print(now, watermark)
             remaining = []
             for elem in self.memory:
                 t = to_datetime(self.get_value(elem))
-                if t >= watermark and t <= now:
+                if t > watermark and t <= now:
                     remaining.append(elem)
             self.memory = remaining
-            if now - to_datetime(self.get_value(self.memory[0])) >= self.window:
+            if now - to_datetime(self.get_value(self.memory[0])) >= self.window - timedelta(seconds=1):
                 yield self.memory
+                if self.fixed:
+                    self.memory = []
 
 
 class Pipeline:
