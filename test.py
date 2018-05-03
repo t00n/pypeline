@@ -1,9 +1,11 @@
+from datetime import timedelta
+
 from bitoduc import (
     Pipeline,
     Source,
     Sink,
     Function,
-    Map,
+    # Map,
     Window,
     # GroupBy,
     # Resample,
@@ -30,12 +32,17 @@ class CSVSource(FileSource):
 
 class PrintSink(Sink):
     def write(self, row):
-        print(row)
+        print("PRINT", row)
 
 
 class PrintLolSink(Sink):
     def write(self, row):
         print("LOL", row)
+
+
+class PrintYoloSink(Sink):
+    def write(self, row):
+        print("YOLO", row)
 
 
 def split(l):
@@ -45,5 +52,7 @@ def split(l):
 
 with Pipeline() as p:
     csv = p | CSVSource('test.csv')
-    csv | Window(5) | PrintSink()
-    csv | Function(split) | PrintLolSink()
+    # csv | Window(5) | PrintSink()
+    csv | Window(5, fixed=False) | PrintSink()
+    # csv | Function(split) | PrintLolSink()
+    # csv | Window(timedelta(seconds=4), lambda x: x[0]) | PrintYoloSink()

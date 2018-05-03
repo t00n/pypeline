@@ -1,4 +1,7 @@
 from abc import ABC, abstractmethod
+from datetime import datetime, timedelta
+
+from dateutil.parser import parse as date_parse
 
 
 class Component:
@@ -56,17 +59,52 @@ class Sink(Component, ABC):
         pass
 
 
+def to_datetime(d):
+    if isinstance(d, str):
+        return date_parse(d)
+    elif isinstance(d, datetime):
+        return d
+    else:
+        raise ValueError("{} should be a datetime".format(d))
+
+
 class Window(Component):
-    def __init__(self, window):
+    def __init__(self, window, fixed=True, key=None):
         super().__init__()
-        self.window = window
+        if isinstance(window, int) \
+            or isinstance(window, timedelta) \
+                and (isinstance(key, str) or callable(key)):
+            self.window = window
+            self.key = key
+        else:
+            raise ValueError("Window should be an integer or a timedelta and a key")
         self.memory = []
+        self.fixed = fixed
+
+    def get_value(self, row):
+        if callable(self.key):
+            return self.key(row)
+        else:
+            return row[self.key]
 
     def apply(self, row):
+        self.memory.append(row)
         if isinstance(self.window, int):
-            self.memory.append(row)
-            self.memory[-self.window:]
+            self.memory = self.memory[-self.window:]
             if len(self.memory) == self.window:
+                yield self.memory
+                if self.fixed:
+                    self.memory = []
+        elif isinstance(self.window, timedelta):
+            now = to_datetime(self.get_value(row))
+            watermark = now - self.window
+            remaining = []
+            for elem in self.memory:
+                t = to_datetime(self.get_value(elem))
+                if t >= watermark and t <= now:
+                    remaining.append(elem)
+            self.memory = remaining
+            if now - to_datetime(self.get_value(self.memory[0])) >= self.window:
                 yield self.memory
 
 
