@@ -32,6 +32,12 @@ class PrintSink(Sink):
         print(row)
 
 
+class PrintLolSink(Sink):
+    def write(self, row):
+        print("LOL", row)
+
+
 with Pipeline() as p:
-    p | CSVSource('test.csv') \
-      | PrintSink()
+    csv = p | CSVSource('test.csv')
+    csv | PrintSink()
+    csv | PrintLolSink()
