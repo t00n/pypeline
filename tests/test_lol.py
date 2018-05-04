@@ -12,6 +12,8 @@ from pypeline import (
     Window,
 )
 
+from .fixtures import *
+
 
 def test_files():
     try:
@@ -37,19 +39,13 @@ def test_files():
     os.unlink("test_res.csv")
 
 
-def test_iterable_list():
-    data = [
-        "first line",
-        "second line",
-        "third line",
-    ]
-
+def test_iterable_list(data_list):
     result = []
 
     with Pipeline() as p:
-        p | IterableSource(data) | ListSink(result)
+        p | IterableSource(data_list) | ListSink(result)
 
-    assert(data == result)
+    assert(data_list == result)
 
 
 def test_matmul():
@@ -70,23 +66,17 @@ def test_matmul2():
     assert(sink.name == "dummy_sink")
 
 
-def test_fixed_window_int():
-    data = list(range(15))
+def test_fixed_window_int(data_list):
     result = []
     with Pipeline() as p:
-        p | IterableSource(data) | Window(4) | ListSink(result)
+        p | IterableSource(data_list) | Window(4) | ListSink(result)
 
-    assert(result == [data[:4], data[4:8], data[8:12]])
+    assert(result == [data_list[:4], data_list[4:8], data_list[8:12]])
 
 
-def test_fixed_window_timedelta():
-    data = []
-    start = datetime(2018, 5, 4, 15, 45)
-    for i in range(15):
-        d = start + timedelta(seconds=i)
-        data.append({'time': d, 'value': i})
+def test_fixed_window_timedelta(data_timed):
     result = []
     with Pipeline() as p:
-        p | IterableSource(data) | Window(timedelta(seconds=6), key='time') | ListSink(result)
+        p | IterableSource(data_timed) | Window(timedelta(seconds=6), key='time') | ListSink(result)
 
-    assert(result == [data[:6], data[6:12]])
+    assert(result == [data_timed[:6], data_timed[6:12]])
