@@ -85,7 +85,7 @@ def test_fixed_window_timedelta(data_timed):
 def test_sliding_window_int(data_list):
     result = []
     with Pipeline() as p:
-        p | IterableSource(data_list) | Window(4, fixed=False) | ListSink(result)
+        p | IterableSource(data_list) | Window(4, skip=1) | ListSink(result)
 
     should_be = [data_list[i:i+4] for i in range(12)]
 
@@ -95,7 +95,7 @@ def test_sliding_window_int(data_list):
 def test_sliding_window_timedelta(data_timed):
     result = []
     with Pipeline() as p:
-        p | IterableSource(data_timed) | Window(timedelta(seconds=6), fixed=False, key='time') | ListSink(result)
+        p | IterableSource(data_timed) | Window(timedelta(seconds=6), skip=1, key='time') | ListSink(result)
 
     should_be = [data_timed[i:i+6] for i in range(10)]
 

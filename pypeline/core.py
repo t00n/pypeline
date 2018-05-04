@@ -66,7 +66,7 @@ class Sink(Component, ABC):
 
 
 class Window(Component):
-    def __init__(self, window, *, fixed=True, key=None):
+    def __init__(self, window, *, skip=None, key=None):
         super().__init__()
         if isinstance(window, int) \
             or isinstance(window, timedelta) \
@@ -76,7 +76,10 @@ class Window(Component):
         else:
             raise ValueError("Window should be an integer or a timedelta and a key")
         self.memory = []
-        self.fixed = fixed
+        if not (isinstance(skip, int) or skip is None):
+            raise ValueError("Skip parameter should be None (for fixed windows) or an integer (for sliding windows)")
+        self.skip = skip
+        self.skip_counter = self.skip
 
     def get_value(self, row):
         if callable(self.key):
@@ -85,13 +88,12 @@ class Window(Component):
             return row[self.key]
 
     def apply(self, row):
+        must_yield = False
         self.memory.append(row)
         if isinstance(self.window, int):
             self.memory = self.memory[-self.window:]
             if len(self.memory) == self.window:
-                yield deepcopy(self.memory)
-                if self.fixed:
-                    self.memory = []
+                must_yield = True
         elif isinstance(self.window, timedelta):
             now = to_datetime(self.get_value(row))
             watermark = now - self.window + timedelta(seconds=1)
@@ -102,9 +104,11 @@ class Window(Component):
                     remaining.append(elem)
             self.memory = remaining
             if now - to_datetime(self.get_value(self.memory[0])) >= self.window - timedelta(seconds=1):
-                yield deepcopy(self.memory)
-                if self.fixed:
-                    self.memory = []
+                must_yield = True
+        if must_yield:
+            yield deepcopy(self.memory)
+            if self.skip is None:
+                self.memory = []
 
 
 class Pipeline:
