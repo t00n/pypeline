@@ -5,6 +5,8 @@ from pypeline import (
     Pipeline,
     FileSource,
     FileSink,
+    IterableSource,
+    ListSink,
 )
 
 
@@ -27,3 +29,18 @@ def test_lol():
 
     with open("test_res.csv") as f:
         assert(f.read() == content)
+
+
+def test_iterable_list():
+    data = [
+        "first line",
+        "second line",
+        "third line",
+    ]
+
+    result = []
+
+    with Pipeline() as p:
+        p | IterableSource(data) | ListSink(result)
+
+    assert(data == result)

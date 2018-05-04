@@ -9,8 +9,10 @@ from .core import (
 from .source import (
     FileSource,
     CSVSource,
+    IterableSource
 )
 
 from .sink import (
     FileSink,
+    ListSink,
 )

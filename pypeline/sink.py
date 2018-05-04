@@ -14,3 +14,11 @@ class FileSink(Sink):
     def write(self, row):
         with open(self.filename, 'a') as f:
             f.write(str(row))
+
+
+class ListSink(Sink):
+    def __init__(self, l):
+        self.l = l
+
+    def write(self, row):
+        self.l.append(row)

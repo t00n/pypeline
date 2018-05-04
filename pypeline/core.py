@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import timedelta
 
-from utils import to_datetime
+from .utils import to_datetime
 
 
 class Component:
