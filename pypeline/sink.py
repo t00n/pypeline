@@ -1,6 +1,6 @@
 import os
 
-from bitoduc import Sink
+from pypeline import Sink
 
 
 class FileSink(Sink):

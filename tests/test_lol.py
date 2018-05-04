@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 import os
 
-from bitoduc import (
+from pypeline import (
     Pipeline,
     FileSource,
     FileSink,

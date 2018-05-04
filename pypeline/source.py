@@ -1,4 +1,4 @@
-from bitoduc import Source
+from pypeline import Source
 
 
 class FileSource(Source):
