@@ -10,7 +10,7 @@ from pypeline import (
 )
 
 
-def test_lol():
+def test_files():
     try:
         os.unlink("test_lol.csv")
     except FileNotFoundError:
@@ -29,6 +29,9 @@ def test_lol():
 
     with open("test_res.csv") as f:
         assert(f.read() == content)
+
+    os.unlink("test_lol.csv")
+    os.unlink("test_res.csv")
 
 
 def test_iterable_list():
