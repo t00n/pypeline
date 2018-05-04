@@ -9,6 +9,7 @@ from pypeline import (
     ListSink,
     DummySource,
     DummySink,
+    Window,
 )
 
 
@@ -67,3 +68,25 @@ def test_matmul2():
 
     assert(isinstance(sink, DummySink))
     assert(sink.name == "dummy_sink")
+
+
+def test_fixed_window_int():
+    data = list(range(15))
+    result = []
+    with Pipeline() as p:
+        p | IterableSource(data) | Window(4) | ListSink(result)
+
+    assert(result == [data[:4], data[4:8], data[8:12]])
+
+
+def test_fixed_window_timedelta():
+    data = []
+    start = datetime(2018, 5, 4, 15, 45)
+    for i in range(15):
+        d = start + timedelta(seconds=i)
+        data.append({'time': d, 'value': i})
+    result = []
+    with Pipeline() as p:
+        p | IterableSource(data) | Window(timedelta(seconds=6), key='time') | ListSink(result)
+
+    assert(result == [data[:6], data[6:12]])
