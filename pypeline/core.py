@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import timedelta
+from copy import deepcopy
 
 from .utils import to_datetime
 
@@ -88,13 +89,12 @@ class Window(Component):
         if isinstance(self.window, int):
             self.memory = self.memory[-self.window:]
             if len(self.memory) == self.window:
-                yield self.memory
+                yield deepcopy(self.memory)
                 if self.fixed:
                     self.memory = []
         elif isinstance(self.window, timedelta):
             now = to_datetime(self.get_value(row))
             watermark = now - self.window
-            print(now, watermark)
             remaining = []
             for elem in self.memory:
                 t = to_datetime(self.get_value(elem))
