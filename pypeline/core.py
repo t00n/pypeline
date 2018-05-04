@@ -79,7 +79,7 @@ class Window(Component):
         if not (isinstance(skip, int) or skip is None):
             raise ValueError("Skip parameter should be None (for fixed windows) or an integer (for sliding windows)")
         self.skip = skip
-        self.skip_counter = self.skip
+        self.skip_counter = 0
 
     def get_value(self, row):
         if callable(self.key):
@@ -93,7 +93,13 @@ class Window(Component):
         if isinstance(self.window, int):
             self.memory = self.memory[-self.window:]
             if len(self.memory) == self.window:
-                must_yield = True
+                if self.skip is None:
+                    must_yield = True
+                else:
+                    if self.skip_counter == 0:
+                        must_yield = True
+                        self.skip_counter = self.skip
+                    self.skip_counter -= 1
         elif isinstance(self.window, timedelta):
             now = to_datetime(self.get_value(row))
             watermark = now - self.window + timedelta(seconds=1)
