@@ -90,3 +90,13 @@ def test_sliding_window_int(data_list):
     should_be = [data_list[i:i+4] for i in range(12)]
 
     assert(result == should_be)
+
+
+def test_sliding_window_timedelta(data_timed):
+    result = []
+    with Pipeline() as p:
+        p | IterableSource(data_timed) | Window(timedelta(seconds=6), fixed=False, key='time') | ListSink(result)
+
+    should_be = [data_timed[i:i+6] for i in range(10)]
+
+    assert(result == should_be)

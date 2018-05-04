@@ -94,15 +94,15 @@ class Window(Component):
                     self.memory = []
         elif isinstance(self.window, timedelta):
             now = to_datetime(self.get_value(row))
-            watermark = now - self.window
+            watermark = now - self.window + timedelta(seconds=1)
             remaining = []
             for elem in self.memory:
                 t = to_datetime(self.get_value(elem))
-                if t > watermark and t <= now:
+                if t >= watermark and t <= now:
                     remaining.append(elem)
             self.memory = remaining
             if now - to_datetime(self.get_value(self.memory[0])) >= self.window - timedelta(seconds=1):
-                yield self.memory
+                yield deepcopy(self.memory)
                 if self.fixed:
                     self.memory = []
 
