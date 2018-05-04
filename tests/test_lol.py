@@ -7,6 +7,8 @@ from pypeline import (
     FileSink,
     IterableSource,
     ListSink,
+    DummySource,
+    DummySink,
 )
 
 
@@ -47,3 +49,21 @@ def test_iterable_list():
         p | IterableSource(data) | ListSink(result)
 
     assert(data == result)
+
+
+def test_matmul():
+    with Pipeline() as p:
+        source = p | DummySource() @ "dummy_source"
+        sink = source | DummySink() @ "dummy_sink"
+
+    assert(source.name == "dummy_source")
+    assert(sink.name == "dummy_sink")
+
+
+def test_matmul2():
+    with Pipeline() as p:
+        sink = p | DummySource() @ "dummy_source" \
+                 | DummySink() @ "dummy_sink"
+
+    assert(isinstance(sink, DummySink))
+    assert(sink.name == "dummy_sink")

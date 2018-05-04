@@ -9,10 +9,12 @@ from .core import (
 from .source import (
     FileSource,
     CSVSource,
-    IterableSource
+    IterableSource,
+    DummySource,
 )
 
 from .sink import (
     FileSink,
     ListSink,
+    DummySink,
 )

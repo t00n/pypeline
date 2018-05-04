@@ -22,3 +22,8 @@ class ListSink(Sink):
 
     def write(self, row):
         self.l.append(row)
+
+
+class DummySink(Sink):
+    def write(self, row):
+        pass

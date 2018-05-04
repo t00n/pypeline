@@ -7,6 +7,7 @@ from .utils import to_datetime
 class Component:
     def __init__(self):
         self.children = []
+        self.name = ''
 
     def __or__(self, other):
         if not isinstance(other, Component):
@@ -23,6 +24,10 @@ class Component:
 
     def apply(self, row):
         yield row
+
+    def __matmul__(self, name):
+        self.name = name
+        return self
 
 
 class Function(Component):

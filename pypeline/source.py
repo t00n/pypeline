@@ -26,3 +26,8 @@ class IterableSource(Source):
 
     def read(self):
         yield from self.iterable
+
+
+class DummySource(Source):
+    def read(self):
+        return iter([])
