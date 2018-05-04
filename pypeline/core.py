@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
-from datetime import datetime, timedelta
+from datetime import timedelta
 
-from dateutil.parser import parse as date_parse
+from utils import to_datetime
 
 
 class Component:
@@ -57,15 +57,6 @@ class Sink(Component, ABC):
     @abstractmethod
     def write(self, row):
         pass
-
-
-def to_datetime(d):
-    if isinstance(d, str):
-        return date_parse(d)
-    elif isinstance(d, datetime):
-        return d
-    else:
-        raise ValueError("{} should be a datetime".format(d))
 
 
 class Window(Component):
