@@ -185,3 +185,28 @@ def test_groupby(data_timed_holes_grouped):
         [(0, 14), (0, 22)],
         [(1, 27)]
     ])
+
+
+def test_groupby_multiple(data_timed_holes_grouped_multiple):
+    print([(x['group'], x['group2'], x['value']) for x in data_timed_holes_grouped_multiple])
+    result = []
+
+    with Pipeline() as p:
+        p | IterableSource(data_timed_holes_grouped_multiple) \
+          | Window(8) | GroupBy('group') | GroupBy('group2') \
+          | ListSink(result)
+
+    result_int = [[(x['group'], x['group2'], x['value']) for x in ar1] for ar1 in result]
+
+    print(result_int)
+
+    assert(result_int == [
+        [(2, 0, 0), (2, 0, 4)],
+        [(0, 0, 1), (0, 0, 10), (0, 0, 11), (0, 0, 12)],
+        [(0, 1, 3)],
+        [(1, 0, 9)],
+        [(2, 1, 13)],
+        [(2, 0, 19), (2, 0, 20), (2, 0, 21), (2, 0, 24)],
+        [(0, 0, 14), (0, 0, 22)],
+        [(1, 0, 27)]
+    ])

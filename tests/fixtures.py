@@ -46,3 +46,13 @@ def data_timed_holes_grouped(data_timed_holes):
         row['group'] = random.randint(0, 2)
 
     return data
+
+
+@pytest.fixture
+def data_timed_holes_grouped_multiple(data_timed_holes_grouped):
+    data = deepcopy(data_timed_holes_grouped)
+    random.seed(42)
+    for row in data:
+        row['group2'] = random.randint(0, 1)
+
+    return data

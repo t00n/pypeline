@@ -166,8 +166,7 @@ class GroupBy(Component):
         grouped = defaultdict(lambda: [])
         for row in rows:
             grouped[get_value(row, self.key)].append(row)
-        for group in grouped.values():
-            yield deepcopy(group)
+        yield from grouped.values()
 
 
 class Pipeline:
