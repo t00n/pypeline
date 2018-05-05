@@ -140,18 +140,22 @@ class Window(Component):
             # use while because if holes between rows are large, we might trigger several windows
             # when we receive only one row
             while now - self.watermark >= self.window - timedelta(seconds=1):
-                watermark = self.watermark + self.window
+                high_watermark = self.watermark + self.window
+                # retrieve all rows before the end of the current window
                 to_yield = []
                 for elem in self.memory:
                     t = to_datetime(self.key.get_value(elem))
-                    if t < watermark:
+                    if t < high_watermark:
                         to_yield.append(elem)
+                # don't yield empty windows
                 if len(to_yield) > 0:
                     yield deepcopy(to_yield)
+                # adjust watermark depending on window type (fixed/sliding)
                 if self.skip is None:
                     self.watermark += self.window
                 else:
                     self.watermark += timedelta(seconds=self.skip)
+                # keep only rows after the beginning of the next window
                 remaining = []
                 for elem in self.memory:
                     t = to_datetime(self.key.get_value(elem))
