@@ -201,7 +201,7 @@ def test_double_windows(data_timed_holes):
           | Window(5) \
           | Flatten() \
           | Window(timedelta(seconds=5), key='time') \
-          | ListSink(result)    
+          | ListSink(result)
 
     result_int = [[x['value'] for x in ar] for ar in result]
 
@@ -211,6 +211,39 @@ def test_double_windows(data_timed_holes):
         [10, 11, 12, 13, 14],
         [19],
         [20, 21, 22, 24],
+    ])
+
+
+def test_time_window_fixed_dont_yield_empty_list(data_timed_holes):
+    result = []
+
+    with Pipeline() as p:
+        p | IterableSource(data_timed_holes) \
+          | Window(timedelta(seconds=1), key='time') \
+          | ListSink(result)
+
+    result_int = [[x['value'] for x in ar] for ar in result]
+
+    assert(result_int == [
+        [0],
+        [1],
+        [3],
+        [4],
+        [9],
+        [10],
+        [11],
+        [12],
+        [13],
+        [14],
+        [19],
+        [20],
+        [21],
+        [22],
+        [24],
+        [27],
+        [28],
+        [29],
+        [30]
     ])
 
 def test_groupby(data_timed_holes_grouped):

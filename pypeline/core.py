@@ -146,7 +146,8 @@ class Window(Component):
                     t = to_datetime(self.key.get_value(elem))
                     if t < watermark:
                         to_yield.append(elem)
-                yield deepcopy(to_yield)
+                if len(to_yield) > 0:
+                    yield deepcopy(to_yield)
                 if self.skip is None:
                     self.watermark += self.window
                 else:
