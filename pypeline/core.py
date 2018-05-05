@@ -69,12 +69,17 @@ class Sink(Component, ABC):
 class Key:
     def __init__(self, key):
         self.key = key
-        if isinstance(key, str):
-            self.get_value = lambda row: row[key]
-        elif callable(key):
-            self.get_value = lambda row: key(row)
-        else:
+        if not (isinstance(key, str) or callable(key)):
             raise ValueError("Key should be a str or a callable")
+
+    def get_value(self, row):
+        if isinstance(self.key, str):
+            try:
+                return row[self.key]
+            except:
+                return getattr(row, self.key)
+        elif callable(self.key):
+            return self.key(row)
 
 
 class Window(Component):
