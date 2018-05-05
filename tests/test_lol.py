@@ -74,12 +74,20 @@ def test_fixed_window_int(data_list):
     assert(result == [data_list[:4], data_list[4:8], data_list[8:12]])
 
 
-def test_fixed_window_timedelta(data_timed):
+def test_fixed_window_timedelta(data_timed_holes):
     result = []
     with Pipeline() as p:
-        p | IterableSource(data_timed) | Window(timedelta(seconds=6), key='time') | ListSink(result)
+        p | IterableSource(data_timed_holes) | Window(timedelta(seconds=6), key='time') | ListSink(result)
 
-    assert(result == [data_timed[:6], data_timed[6:12]])
+    result_int = [[x['value'] for x in ar] for ar in result]
+
+    assert(result_int == [
+        [0, 1, 3, 4],
+        [9, 10, 11],
+        [12, 13, 14],
+        [19, 20, 21, 22],
+        [24, 27, 28, 29],
+    ])
 
 
 def test_sliding_window_int(data_list):
