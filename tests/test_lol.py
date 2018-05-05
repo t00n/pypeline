@@ -188,7 +188,6 @@ def test_groupby(data_timed_holes_grouped):
 
 
 def test_groupby_multiple(data_timed_holes_grouped_multiple):
-    print([(x['group'], x['group2'], x['value']) for x in data_timed_holes_grouped_multiple])
     result = []
 
     with Pipeline() as p:
@@ -197,8 +196,6 @@ def test_groupby_multiple(data_timed_holes_grouped_multiple):
           | ListSink(result)
 
     result_int = [[(x['group'], x['group2'], x['value']) for x in ar1] for ar1 in result]
-
-    print(result_int)
 
     assert(result_int == [
         [(2, 0, 0), (2, 0, 4)],

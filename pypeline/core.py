@@ -66,23 +66,29 @@ class Sink(Component, ABC):
         pass
 
 
-def get_value(row, key):
-    if callable(key):
-        return key(row)
-    else:
-        return row[key]
+class Key:
+    def __init__(self, key):
+        self.key = key
+        if isinstance(key, str):
+            self.get_value = lambda row: row[key]
+        elif callable(key):
+            self.get_value = lambda row: key(row)
+        else:
+            raise ValueError("Key should be a str or a callable")
 
 
 class Window(Component):
-    def __init__(self, window, *, skip=None, key=None):
+    def __init__(self, window, *, key=None, skip=None):
         super().__init__()
-        if isinstance(window, int) \
-            or isinstance(window, timedelta) \
-                and (isinstance(key, str) or callable(key)):
+        if isinstance(window, int):
             self.window = window
-            self.key = key
+        elif isinstance(window, timedelta):
+            self.window = window
+            if key is None:
+                raise ValueError("Should provide a key when using a time-based window")
+            self.key = Key(key)
         else:
-            raise ValueError("Window should be an integer or a timedelta and a key")
+            raise ValueError("Window should be an integer or a timedelta")
         self.memory = []
         if not (isinstance(skip, int) or skip is None):
             raise ValueError("Skip parameter should be None (for fixed windows) or an integer (for sliding windows)")
@@ -101,7 +107,7 @@ class Window(Component):
         # if this is a time-based sliding window, we keep the first row timestamp
         # as the watermark to keep a track of rows to skip
         if first_time and isinstance(self.window, timedelta):
-            self.watermark = to_datetime(get_value(self.memory[0], self.key))
+            self.watermark = to_datetime(self.key.get_value(self.memory[0]))
         # if this is a count-based window, we simply keep `self.window` rows
         # we yield when memory is full
         # if this is a sliding window, we decrement the skip counter on each row
@@ -122,15 +128,15 @@ class Window(Component):
         # if sliding we add self.skip to the watermark when we yield
         # we keep only rows after the watermark
         elif isinstance(self.window, timedelta):
-            now = to_datetime(get_value(row, self.key))
-            oldest = to_datetime(get_value(self.memory[0], self.key))
+            now = to_datetime(self.key.get_value(row))
+            oldest = to_datetime(self.key.get_value(self.memory[0]))
             # use while because if holes between rows are large, we might trigger several windows
             # when we receive only one row
             while now - oldest >= self.window - timedelta(seconds=1):
                 watermark = self.watermark + self.window
                 to_yield = []
                 for elem in self.memory:
-                    t = to_datetime(get_value(elem, self.key))
+                    t = to_datetime(self.key.get_value(elem))
                     if t < watermark:
                         to_yield.append(elem)
                 yield deepcopy(to_yield)
@@ -140,13 +146,13 @@ class Window(Component):
                     self.watermark += timedelta(seconds=self.skip)
                 remaining = []
                 for elem in self.memory:
-                    t = to_datetime(get_value(elem, self.key))
+                    t = to_datetime(self.key.get_value(elem))
                     if t >= self.watermark:
                         remaining.append(elem)
                 self.memory = remaining
                 # in the case we exhaust the memory, we break
                 if len(self.memory) > 0:
-                    oldest = to_datetime(get_value(self.memory[0], self.key))
+                    oldest = to_datetime(self.key.get_value(self.memory[0]))
                 else:
                     break
         if must_yield:
@@ -158,14 +164,14 @@ class Window(Component):
 class GroupBy(Component):
     def __init__(self, key):
         super().__init__()
-        self.key = key
+        self.key = Key(key)
 
     def apply(self, rows):
         if not isinstance(rows, list):
             raise ValueError("GroupBy must receive a list")
         grouped = defaultdict(lambda: [])
         for row in rows:
-            grouped[get_value(row, self.key)].append(row)
+            grouped[self.key.get_value(row)].append(row)
         yield from grouped.values()
 
 

@@ -30,4 +30,4 @@ class IterableSource(Source):
 
 class DummySource(Source):
     def read(self):
-        return iter([])
+        yield
