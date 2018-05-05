@@ -21,12 +21,11 @@ pytest
  * Map and Function
  * Fixed windows (time-based and count-based)
  * Count-based sliding windows
+ * Time-based sliding windows
+ * GroupBy
 
 
 # TODO
 
- * Time-based sliding windows
- * GroupBy
- * Resample
  * use deepcopy everytime rows are passed along the pipeline
  * lots of tests
