@@ -167,6 +167,18 @@ def test_sliding_window_timedelta_skip(data_timed_holes):
     ])
 
 
+def test_window_list(data_list):
+    result = []
+
+    with Pipeline() as p:
+        p | IterableSource(data_list) \
+          | Window(5) \
+          | Window(2) \
+          | ListSink(result)
+
+    assert(result == [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9], [10, 11], [12, 13]])
+
+
 def test_groupby(data_timed_holes_grouped):
     result = []
 

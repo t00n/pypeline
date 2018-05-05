@@ -103,7 +103,7 @@ class Window(Component):
         # we set the counter to 0 here so that the first window is always yielded
         self.skip_counter = 0
 
-    def apply(self, row):
+    def apply_row(self, row):
         must_yield = False
         first_time = False
         if len(self.memory) == 0:
@@ -164,6 +164,13 @@ class Window(Component):
             yield deepcopy(self.memory)
             if self.skip is None:
                 self.memory = []
+
+    def apply(self, data):
+        if isinstance(data, list):
+            for row in data:
+                yield from self.apply_row(row)
+        else:
+            yield from self.apply_row(data)
 
 
 class GroupBy(Component):
