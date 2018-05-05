@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import random
+from copy import deepcopy
 
 import pytest
 
@@ -34,4 +35,14 @@ def data_timed_holes():
             i += random.randint(1, 5)
         else:
             i += 1
+    return data
+
+
+@pytest.fixture
+def data_timed_holes_grouped(data_timed_holes):
+    data = deepcopy(data_timed_holes)
+    random.seed(42)
+    for row in data:
+        row['group'] = random.randint(0, 2)
+
     return data

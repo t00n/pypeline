@@ -10,6 +10,7 @@ from pypeline import (
     DummySource,
     DummySink,
     Window,
+    GroupBy,
 )
 
 from .fixtures import *
@@ -107,8 +108,6 @@ def test_sliding_window_timedelta(data_timed_holes):
 
     result_int = [[x['value'] for x in ar] for ar in result]
 
-    print("RESULT", result_int)
-
     assert(result_int == [
         [0, 1, 3, 4],
         [1, 3, 4],
@@ -145,8 +144,6 @@ def test_sliding_window_int_skip(data_list):
 
     should_be = [data_list[i:i+4] for i in range(0, 12, 3)]
 
-    print(result)
-
     assert(result == should_be)
 
 
@@ -167,4 +164,24 @@ def test_sliding_window_timedelta_skip(data_timed_holes):
         [19, 20, 21, 22],
         [21, 22, 24],
         [24, 27, 28, 29],
+    ])
+
+
+def test_groupby(data_timed_holes_grouped):
+    result = []
+
+    with Pipeline() as p:
+        p | IterableSource(data_timed_holes_grouped) \
+          | Window(8) | GroupBy('group') \
+          | ListSink(result)
+
+    result_int = [[(x['group'], x['value']) for x in ar] for ar in result]
+
+    assert(result_int == [
+        [(2, 0), (2, 4)],
+        [(0, 1), (0, 3), (0, 10), (0, 11), (0, 12)],
+        [(1, 9)],
+        [(2, 13), (2, 19), (2, 20), (2, 21), (2, 24)],
+        [(0, 14), (0, 22)],
+        [(1, 27)]
     ])

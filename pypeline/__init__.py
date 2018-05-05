@@ -4,6 +4,7 @@ from .core import (
     Source,
     Sink,
     Window,
+    GroupBy,
 )
 
 from .source import (

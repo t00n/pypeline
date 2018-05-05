@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import timedelta
 from copy import deepcopy
+from collections import defaultdict
 
 from .utils import to_datetime
 
@@ -65,6 +66,13 @@ class Sink(Component, ABC):
         pass
 
 
+def get_value(row, key):
+    if callable(key):
+        return key(row)
+    else:
+        return row[key]
+
+
 class Window(Component):
     def __init__(self, window, *, skip=None, key=None):
         super().__init__()
@@ -84,12 +92,6 @@ class Window(Component):
         # we set the counter to 0 here so that the first window is always yielded
         self.skip_counter = 0
 
-    def get_value(self, row):
-        if callable(self.key):
-            return self.key(row)
-        else:
-            return row[self.key]
-
     def apply(self, row):
         must_yield = False
         first_time = False
@@ -99,7 +101,7 @@ class Window(Component):
         # if this is a time-based sliding window, we keep the first row timestamp
         # as the watermark to keep a track of rows to skip
         if first_time and isinstance(self.window, timedelta):
-            self.watermark = to_datetime(self.get_value(self.memory[0]))
+            self.watermark = to_datetime(get_value(self.memory[0], self.key))
         # if this is a count-based window, we simply keep `self.window` rows
         # we yield when memory is full
         # if this is a sliding window, we decrement the skip counter on each row
@@ -120,15 +122,15 @@ class Window(Component):
         # if sliding we add self.skip to the watermark when we yield
         # we keep only rows after the watermark
         elif isinstance(self.window, timedelta):
-            now = to_datetime(self.get_value(row))
-            oldest = to_datetime(self.get_value(self.memory[0]))
+            now = to_datetime(get_value(row, self.key))
+            oldest = to_datetime(get_value(self.memory[0], self.key))
             # use while because if holes between rows are large, we might trigger several windows
             # when we receive only one row
             while now - oldest >= self.window - timedelta(seconds=1):
                 watermark = self.watermark + self.window
                 to_yield = []
                 for elem in self.memory:
-                    t = to_datetime(self.get_value(elem))
+                    t = to_datetime(get_value(elem, self.key))
                     if t < watermark:
                         to_yield.append(elem)
                 yield deepcopy(to_yield)
@@ -138,19 +140,34 @@ class Window(Component):
                     self.watermark += timedelta(seconds=self.skip)
                 remaining = []
                 for elem in self.memory:
-                    t = to_datetime(self.get_value(elem))
+                    t = to_datetime(get_value(elem, self.key))
                     if t >= self.watermark:
                         remaining.append(elem)
                 self.memory = remaining
                 # in the case we exhaust the memory, we break
                 if len(self.memory) > 0:
-                    oldest = to_datetime(self.get_value(self.memory[0]))
+                    oldest = to_datetime(get_value(self.memory[0], self.key))
                 else:
                     break
         if must_yield:
             yield deepcopy(self.memory)
             if self.skip is None:
                 self.memory = []
+
+
+class GroupBy(Component):
+    def __init__(self, key):
+        super().__init__()
+        self.key = key
+
+    def apply(self, rows):
+        if not isinstance(rows, list):
+            raise ValueError("GroupBy must receive a list")
+        grouped = defaultdict(lambda: [])
+        for row in rows:
+            grouped[get_value(row, self.key)].append(row)
+        for group in grouped.values():
+            yield deepcopy(group)
 
 
 class Pipeline:
