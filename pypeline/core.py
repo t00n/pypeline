@@ -79,6 +79,9 @@ class Window(Component):
         if not (isinstance(skip, int) or skip is None):
             raise ValueError("Skip parameter should be None (for fixed windows) or an integer (for sliding windows)")
         self.skip = skip
+        # if this is a count-based sliding window, we keep a counter of rows to skip.
+        # once the counter is <= 0, we must yield if the window is full
+        # we set the counter to 0 here so that the first window is always yielded
         self.skip_counter = 0
 
     def get_value(self, row):
@@ -89,7 +92,18 @@ class Window(Component):
 
     def apply(self, row):
         must_yield = False
+        first_time = False
+        if len(self.memory) == 0:
+            first_time = True
         self.memory.append(row)
+        # if this is a time-based sliding window, we keep the first row timestamp
+        # as the watermark to keep a track of rows to skip
+        if first_time and isinstance(self.window, timedelta) and self.skip is not None:
+            self.watermark = to_datetime(self.get_value(self.memory[0]))
+        # if this is a count-based window, we simply keep `self.window` rows
+        # we yield when memory is full
+        # if this is a sliding window, we decrement the skip counter on each row
+        # and we yield only when counter <= 0
         if isinstance(self.window, int):
             self.memory = self.memory[-self.window:]
             if len(self.memory) == self.window:
@@ -100,17 +114,46 @@ class Window(Component):
                         must_yield = True
                         self.skip_counter = self.skip
                     self.skip_counter -= 1
+        # if this is a time-based window, there are 2 cases for fixed windows and sliding windows
         elif isinstance(self.window, timedelta):
-            now = to_datetime(self.get_value(row))
-            watermark = now - self.window + timedelta(seconds=1)
-            remaining = []
-            for elem in self.memory:
-                t = to_datetime(self.get_value(elem))
-                if t >= watermark and t <= now:
-                    remaining.append(elem)
-            self.memory = remaining
-            if now - to_datetime(self.get_value(self.memory[0])) >= self.window - timedelta(seconds=1):
-                must_yield = True
+            # if this is a fixed window, we yield when the duration of the window >= self.window
+            # we update the memory by keeping all rows after `now - self.window`
+            if self.skip is None:
+                now = to_datetime(self.get_value(row))
+                oldest = to_datetime(self.get_value(self.memory[0]))
+                if now - oldest >= self.window - timedelta(seconds=1):
+                    must_yield = True
+                # update memory
+                watermark = now - self.window + timedelta(seconds=1)
+                remaining = []
+                for elem in self.memory:
+                    t = to_datetime(self.get_value(elem))
+                    if t >= watermark and t <= now:
+                        remaining.append(elem)
+                self.memory = remaining
+            # if this is a sliding window, we use self.watermark to know the beginning of the next window to yield
+            # we keep only rows after this watermark
+            # we add self.skip seconds to this watermark everytime we yield
+            # we yield when the duration of the window is >= self.window
+            else:
+                now = to_datetime(self.get_value(row))
+                oldest = to_datetime(self.get_value(self.memory[0]))
+                if now - oldest >= self.window - timedelta(seconds=1):
+                    watermark = self.watermark + self.window
+                    to_yield = []
+                    for elem in self.memory:
+                        t = to_datetime(self.get_value(elem))
+                        if t < watermark:
+                            to_yield.append(elem)
+                    yield deepcopy(to_yield)
+                    # keep only after watermark
+                    self.watermark += timedelta(seconds=self.skip)
+                    remaining = []
+                    for elem in self.memory:
+                        t = to_datetime(self.get_value(elem))
+                        if t >= self.watermark:
+                            remaining.append(elem)
+                    self.memory = remaining
         if must_yield:
             yield deepcopy(self.memory)
             if self.skip is None:

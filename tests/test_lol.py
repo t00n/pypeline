@@ -112,3 +112,23 @@ def test_sliding_window_int_skip(data_list):
     print(result)
 
     assert(result == should_be)
+
+
+def test_sliding_window_timedelta_skip(data_timed_holes):
+    result = []
+    with Pipeline() as p:
+        p | IterableSource(data_timed_holes) | Window(timedelta(seconds=6), skip=3, key='time') | ListSink(result)
+
+    result_int = [[x['value'] for x in ar] for ar in result]
+
+    assert(result_int == [
+        [0, 1, 3, 4],
+        [3, 4],
+        [9, 10, 11],
+        [9, 10, 11, 12, 13, 14],
+        [12, 13, 14],
+        [19, 20],
+        [19, 20, 21, 22],
+        [21, 22, 24],
+        [24, 27, 28, 29],
+    ])
