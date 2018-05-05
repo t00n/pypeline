@@ -122,7 +122,9 @@ class Window(Component):
         elif isinstance(self.window, timedelta):
             now = to_datetime(self.get_value(row))
             oldest = to_datetime(self.get_value(self.memory[0]))
-            if now - oldest >= self.window - timedelta(seconds=1):
+            # use while because if holes between rows are large, we might trigger several windows
+            # when we receive only one row
+            while now - oldest >= self.window - timedelta(seconds=1):
                 watermark = self.watermark + self.window
                 to_yield = []
                 for elem in self.memory:
@@ -140,6 +142,11 @@ class Window(Component):
                     if t >= self.watermark:
                         remaining.append(elem)
                 self.memory = remaining
+                # in the case we exhaust the memory, we break
+                if len(self.memory) > 0:
+                    oldest = to_datetime(self.get_value(self.memory[0]))
+                else:
+                    break
         if must_yield:
             yield deepcopy(self.memory)
             if self.skip is None:
