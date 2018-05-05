@@ -5,6 +5,7 @@ from .core import (
     Sink,
     Window,
     GroupBy,
+    Flatten,
 )
 
 from .source import (

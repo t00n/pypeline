@@ -11,6 +11,7 @@ from pypeline import (
     DummySink,
     Window,
     GroupBy,
+    Flatten,
 )
 
 from .fixtures import *
@@ -177,6 +178,18 @@ def test_window_list(data_list):
           | ListSink(result)
 
     assert(result == [[0, 1], [2, 3], [4, 5], [6, 7], [8, 9], [10, 11], [12, 13]])
+
+
+def test_flatten(data_list):
+    result = []
+
+    with Pipeline() as p:
+        p | IterableSource(data_list) \
+          | Window(5) \
+          | Flatten() \
+          | ListSink(result)
+
+    assert(result == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14])
 
 
 def test_groupby(data_timed_holes_grouped):

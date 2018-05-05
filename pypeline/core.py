@@ -187,6 +187,14 @@ class GroupBy(Component):
         yield from grouped.values()
 
 
+class Flatten(Component):
+    def apply(self, rows):
+        if isinstance(rows, list):
+            yield from rows
+        else:
+            raise ValueError("Flatten must receive a list")
+
+
 class Pipeline:
     def __or__(self, source):
         if not isinstance(source, Source):
