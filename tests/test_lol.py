@@ -134,7 +134,8 @@ def test_sliding_window_timedelta(data_timed_holes):
         [21, 22, 24],
         [22, 24, 27],
         [24, 27, 28],
-        [24, 27, 28, 29]
+        [24, 27, 28, 29],
+        [27, 28, 29, 30],
     ])
 
 
@@ -191,6 +192,26 @@ def test_flatten(data_list):
 
     assert(result == [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14])
 
+
+def test_double_windows(data_timed_holes):
+    result = []
+
+    with Pipeline() as p:
+        p | IterableSource(data_timed_holes) \
+          | Window(5) \
+          | Flatten() \
+          | Window(timedelta(seconds=5), key='time') \
+          | ListSink(result)    
+
+    result_int = [[x['value'] for x in ar] for ar in result]
+
+    assert(result_int == [
+        [0, 1, 3, 4],
+        [9],
+        [10, 11, 12, 13, 14],
+        [19],
+        [20, 21, 22, 24],
+    ])
 
 def test_groupby(data_timed_holes_grouped):
     result = []

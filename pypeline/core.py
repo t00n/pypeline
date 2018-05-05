@@ -102,17 +102,15 @@ class Window(Component):
         # once the counter is <= 0, we must yield if the window is full
         # we set the counter to 0 here so that the first window is always yielded
         self.skip_counter = 0
+        self.first_time = True
 
     def apply_row(self, row):
-        must_yield = False
-        first_time = False
-        if len(self.memory) == 0:
-            first_time = True
         self.memory.append(row)
         # if this is a time-based sliding window, we keep the first row timestamp
         # as the watermark to keep a track of rows to skip
-        if first_time and isinstance(self.window, timedelta):
+        if self.first_time and isinstance(self.window, timedelta):
             self.watermark = to_datetime(self.key.get_value(self.memory[0]))
+            self.first_time = False
         # if this is a count-based window, we simply keep `self.window` rows
         # we yield when memory is full
         # if this is a sliding window, we decrement the skip counter on each row
@@ -120,6 +118,7 @@ class Window(Component):
         if isinstance(self.window, int):
             self.memory = self.memory[-self.window:]
             if len(self.memory) == self.window:
+                must_yield = False
                 if self.skip is None:
                     must_yield = True
                 else:
@@ -127,6 +126,10 @@ class Window(Component):
                         must_yield = True
                         self.skip_counter = self.skip
                     self.skip_counter -= 1
+                if must_yield:
+                    yield deepcopy(self.memory)
+                    if self.skip is None:
+                        self.memory = []
         # if this is a time-based window, we have a watermark specifying the beginning of the current window
         # we yield when the duration of the window >= self.window
         # if fixed, we add self.window to the watermark when we yield
@@ -134,10 +137,9 @@ class Window(Component):
         # we keep only rows after the watermark
         elif isinstance(self.window, timedelta):
             now = to_datetime(self.key.get_value(row))
-            oldest = to_datetime(self.key.get_value(self.memory[0]))
             # use while because if holes between rows are large, we might trigger several windows
             # when we receive only one row
-            while now - oldest >= self.window - timedelta(seconds=1):
+            while now - self.watermark >= self.window - timedelta(seconds=1):
                 watermark = self.watermark + self.window
                 to_yield = []
                 for elem in self.memory:
@@ -155,15 +157,6 @@ class Window(Component):
                     if t >= self.watermark:
                         remaining.append(elem)
                 self.memory = remaining
-                # in the case we exhaust the memory, we break
-                if len(self.memory) > 0:
-                    oldest = to_datetime(self.key.get_value(self.memory[0]))
-                else:
-                    break
-        if must_yield:
-            yield deepcopy(self.memory)
-            if self.skip is None:
-                self.memory = []
 
     def apply(self, data):
         if isinstance(data, list):
