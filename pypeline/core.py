@@ -147,9 +147,7 @@ class Window(Component):
                     t = to_datetime(self.key.get_value(elem))
                     if t < high_watermark:
                         to_yield.append(elem)
-                # don't yield empty windows
-                if len(to_yield) > 0:
-                    yield deepcopy(to_yield)
+                yield deepcopy(to_yield)
                 # adjust watermark depending on window type (fixed/sliding)
                 if self.skip is None:
                     self.watermark += self.window
