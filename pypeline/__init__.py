@@ -6,6 +6,7 @@ from .core import (
     Window,
     GroupBy,
     Flatten,
+    Filter,
 )
 
 from .source import (

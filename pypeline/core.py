@@ -48,6 +48,12 @@ class Map(Function):
         yield self.f(row)
 
 
+class Filter(Function):
+    def apply(self, row):
+        if self.f(row):
+            yield row
+
+
 class Source(Component, ABC):
     @abstractmethod
     def read(self):
