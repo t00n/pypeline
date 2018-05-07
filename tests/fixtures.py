@@ -56,3 +56,13 @@ def data_timed_holes_grouped_multiple(data_timed_holes_grouped):
         row['group2'] = random.randint(0, 1)
 
     return data
+
+
+@pytest.fixture
+def data_timed_not_aligned(data_timed_holes):
+    data = deepcopy(data_timed_holes)
+    for row in data:
+        row['time'] += timedelta(seconds=3)
+        row['value'] += 3
+
+    return data

@@ -115,7 +115,11 @@ class Window(Component):
         # if this is a time-based sliding window, we keep the first row timestamp
         # as the watermark to keep a track of rows to skip
         if self.first_time and isinstance(self.window, timedelta):
-            self.watermark = to_datetime(self.key.get_value(self.memory[0]))
+            start_ts = to_datetime(self.key.get_value(row)).timestamp()
+            window_ts = self.window.total_seconds()
+            start_ts //= window_ts
+            start_ts *= window_ts
+            self.watermark = to_datetime(start_ts)
             self.first_time = False
         # if this is a count-based window, we simply keep `self.window` rows
         # we yield when memory is full

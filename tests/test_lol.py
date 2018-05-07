@@ -296,3 +296,20 @@ def test_groupby_multiple(data_timed_holes_grouped_multiple):
         [(0, 0, 14), (0, 0, 22)],
         [(1, 0, 27)]
     ])
+
+
+def test_window_not_aligned(data_timed_not_aligned):
+    result = []
+
+    with Pipeline() as p:
+        p | IterableSource(data_timed_not_aligned) \
+          | Window(timedelta(seconds=10), key='time') \
+          | ListSink(result)
+
+    result_int = [[x['value'] for x in ar1] for ar1 in result]
+
+    assert(result_int == [
+        [3, 4, 6, 7],
+        [12, 13, 14, 15, 16, 17],
+        [22, 23, 24, 25, 27],
+    ])
