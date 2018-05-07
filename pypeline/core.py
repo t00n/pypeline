@@ -119,7 +119,7 @@ class Window(Component):
             window_ts = self.window.total_seconds()
             start_ts //= window_ts
             start_ts *= window_ts
-            self.watermark = to_datetime(start_ts)
+            self.watermark = to_datetime(start_ts).replace(tzinfo=self.key.get_value(row).tzinfo)
             self.first_time = False
         # if this is a count-based window, we simply keep `self.window` rows
         # we yield when memory is full
