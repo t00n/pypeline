@@ -145,7 +145,7 @@ class Window(Component):
             now = to_datetime(self.key.get_value(row))
             # use while because if holes between rows are large, we might trigger several windows
             # when we receive only one row
-            while now - self.watermark >= self.window - timedelta(seconds=1):
+            while now - self.watermark >= self.window:
                 high_watermark = self.watermark + self.window
                 # retrieve all rows before the end of the current window
                 to_yield = []

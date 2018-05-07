@@ -135,7 +135,6 @@ def test_sliding_window_timedelta(data_timed_holes):
         [22, 24, 27],
         [24, 27, 28],
         [24, 27, 28, 29],
-        [27, 28, 29, 30],
     ])
 
 
@@ -198,7 +197,7 @@ def test_double_windows(data_timed_holes):
 
     with Pipeline() as p:
         p | IterableSource(data_timed_holes) \
-          | Window(5) \
+          | Window(6) \
           | Flatten() \
           | Window(timedelta(seconds=5), key='time') \
           | ListSink(result)
@@ -214,7 +213,7 @@ def test_double_windows(data_timed_holes):
     ])
 
 
-def test_time_window_fixed_dont_yield_empty_list(data_timed_holes):
+def test_time_window_fixed_yield_empty_list(data_timed_holes):
     result = []
 
     with Pipeline() as p:
@@ -227,23 +226,34 @@ def test_time_window_fixed_dont_yield_empty_list(data_timed_holes):
     assert(result_int == [
         [0],
         [1],
+        [],
         [3],
         [4],
+        [],
+        [],
+        [],
+        [],
         [9],
         [10],
         [11],
         [12],
         [13],
         [14],
+        [],
+        [],
+        [],
+        [],
         [19],
         [20],
         [21],
         [22],
+        [],
         [24],
+        [],
+        [],
         [27],
         [28],
         [29],
-        [30]
     ])
 
 def test_groupby(data_timed_holes_grouped):
