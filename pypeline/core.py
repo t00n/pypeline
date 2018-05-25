@@ -2,6 +2,11 @@ from abc import ABC, abstractmethod
 from datetime import timedelta
 from copy import deepcopy
 from collections import defaultdict
+from multiprocessing import Process
+import uuid
+import pickle
+
+import redis
 
 from .utils import to_datetime
 
@@ -9,27 +14,61 @@ from .utils import to_datetime
 class Component:
     def __init__(self):
         self.children = []
-        self.name = ''
+        self.name = uuid.uuid4()
+        self.redis = redis.Redis()
+        self.in_counter = 0
+        self.out_counter = 0
 
     def __or__(self, other):
+        """ Add a child to this component """
         if not isinstance(other, Component):
             raise ValueError("{} should be a Component".format(other))
         self.children.append(other)
+        self.pipeline.add_component(other)
         return other
 
     def propagate(self, row):
-        for child in self.children:
-            res = self.apply(row)
-            if res is not None:
-                for r in res:
-                    child.propagate(r)
+        """ Apply operation on row and propagate results to children """
+        self.in_counter += 1
+        res = self.apply(row)
+        if res is not None:
+            for r in res:
+                self.out_counter += 1
+                for child in self.children:
+                    self.redis.rpush('pypeline.components.%s' % child.name, pickle.dumps(r))
 
     def apply(self, row):
+        """ Operation of this component """
         yield row
 
     def __matmul__(self, name):
+        """ Set the name of this component """
         self.name = name
         return self
+
+    def set_pipeline(self, pipeline):
+        self.pipeline = pipeline
+
+    def should_halt(self):
+        """ Determine if all data has been processed using counters and information from previous component """
+        total = self.redis.get('pypeline.counters.%s' % self.name)
+        if total is None:
+            return False
+        total = int(total)
+        return self.in_counter == total
+
+    def halt_children(self):
+        """ Publish number of propagated rows so that children know when to stop """
+        for child in self.children:
+            self.redis.set('pypeline.counters.%s' % child.name, self.out_counter)
+
+    def run(self):
+        """ Retrieve next row and propagate it """
+        while not self.should_halt():
+            row = self.redis.lpop('pypeline.components.%s' % self.name)
+            if row is not None:
+                self.propagate(pickle.loads(row))
+        self.halt_children()
 
 
 class Function(Component):
@@ -59,12 +98,18 @@ class Source(Component, ABC):
     def read(self):
         pass
 
+    def run(self):
+        for row in self.read():
+            self.propagate(row)
+        self.halt_children()
+
 
 class Sink(Component, ABC):
     def __or__(self, other):
         raise ValueError("A Sink is always the last element")
 
     def propagate(self, row):
+        self.in_counter += 1
         self.write(row)
 
     @abstractmethod
@@ -201,16 +246,38 @@ class Flatten(Component):
             raise ValueError("Flatten must receive a list")
 
 
+def run_component(component):
+    component.run()
+
+
 class Pipeline:
+    def __init__(self):
+        self.components = []
+        self.processes = []
+        self.redis = redis.Redis()
+        self.name = uuid.uuid4()
+
     def __or__(self, source):
         if not isinstance(source, Source):
             raise ValueError("First element must be a Source")
-        self.source = source
-        return self.source
+        self.add_component(source)
+        return source
+
+    def add_component(self, component):
+        component.set_pipeline(self)
+        self.components.append(component)
 
     def run(self):
-        for row in self.source.read():
-            self.source.propagate(row)
+        for compo in self.components:
+            if not isinstance(compo, Sink):
+                p = Process(target=run_component, args=(compo,))
+                p.start()
+                self.processes.append(p)
+        for p in self.processes:
+            p.join()
+        for compo in self.components:
+            if isinstance(compo, Sink):
+                compo.run()
 
     def __enter__(self):
         return self

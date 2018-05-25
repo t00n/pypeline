@@ -5,6 +5,7 @@ from pypeline import Sink
 
 class FileSink(Sink):
     def __init__(self, filename):
+        super().__init__()
         self.filename = filename
         try:
             os.unlink(self.filename)
@@ -18,6 +19,7 @@ class FileSink(Sink):
 
 class ListSink(Sink):
     def __init__(self, l):
+        super().__init__()
         self.l = l
 
     def write(self, row):
