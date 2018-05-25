@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from datetime import timedelta
-from copy import deepcopy
 from collections import defaultdict
 from multiprocessing import Process
 import uuid
@@ -182,7 +181,7 @@ class Window(Component):
                         self.skip_counter = self.skip
                     self.skip_counter -= 1
                 if must_yield:
-                    yield deepcopy(self.memory)
+                    yield self.memory
                     if self.skip is None:
                         self.memory = []
         # if this is a time-based window, we have a watermark specifying the beginning of the current window
@@ -202,7 +201,7 @@ class Window(Component):
                     t = to_datetime(self.key.get_value(elem))
                     if t < high_watermark:
                         to_yield.append(elem)
-                yield deepcopy(to_yield)
+                yield to_yield
                 # adjust watermark depending on window type (fixed/sliding)
                 if self.skip is None:
                     self.watermark += self.window
