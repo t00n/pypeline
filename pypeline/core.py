@@ -3,38 +3,33 @@ from datetime import timedelta
 from collections import defaultdict
 from multiprocessing import Process
 import uuid
-import pickle
 
-import redis
-
+from .pipe import Pipe
 from .utils import to_datetime
 
 
 class Component:
     def __init__(self):
-        self.children = []
+        self.outbound_pipes = []
         self.name = uuid.uuid4()
-        self.redis = redis.Redis()
-        self.in_counter = 0
-        self.out_counter = 0
 
     def __or__(self, other):
         """ Add a child to this component """
         if not isinstance(other, Component):
             raise ValueError("{} should be a Component".format(other))
-        self.children.append(other)
+        pipe = Pipe(self.name)
+        other.set_inbound_pipe(pipe)
+        self.outbound_pipes.append(pipe)
         self.pipeline.add_component(other)
         return other
 
     def propagate(self, row):
         """ Apply operation on row and propagate results to children """
-        self.in_counter += 1
         res = self.apply(row)
         if res is not None:
             for r in res:
-                self.out_counter += 1
-                for child in self.children:
-                    self.redis.rpush('pypeline.components.%s' % child.name, pickle.dumps(r))
+                for pipe in self.outbound_pipes:
+                    pipe.send(r)
 
     def apply(self, row):
         """ Operation of this component """
@@ -48,25 +43,23 @@ class Component:
     def set_pipeline(self, pipeline):
         self.pipeline = pipeline
 
+    def set_inbound_pipe(self, pipe):
+        self.inbound_pipe = pipe
+
     def should_halt(self):
-        """ Determine if all data has been processed using counters and information from previous component """
-        total = self.redis.get('pypeline.counters.%s' % self.name)
-        if total is None:
-            return False
-        total = int(total)
-        return self.in_counter == total
+        return self.inbound_pipe.is_closed()
 
     def halt_children(self):
         """ Publish number of propagated rows so that children know when to stop """
-        for child in self.children:
-            self.redis.set('pypeline.counters.%s' % child.name, self.out_counter)
+        for pipe in self.outbound_pipes:
+            pipe.close()
 
     def run(self):
         """ Retrieve next row and propagate it """
         while not self.should_halt():
-            row = self.redis.lpop('pypeline.components.%s' % self.name)
+            row = self.inbound_pipe.recv()
             if row is not None:
-                self.propagate(pickle.loads(row))
+                self.propagate(row)
         self.halt_children()
 
 
@@ -108,7 +101,6 @@ class Sink(Component, ABC):
         raise ValueError("A Sink is always the last element")
 
     def propagate(self, row):
-        self.in_counter += 1
         self.write(row)
 
     @abstractmethod
@@ -253,7 +245,6 @@ class Pipeline:
     def __init__(self):
         self.components = []
         self.processes = []
-        self.redis = redis.Redis()
         self.name = uuid.uuid4()
 
     def __or__(self, source):
