@@ -2,18 +2,22 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-try:
+
+def redis_available():
+    try:
+        import redis
+
+        # check that a redis server is available
+        r = redis.Redis()
+        r.get('test')
+        del r
+        return True
+    except:
+        return False
+
+if redis_available():
     import pickle
-
-    # check that redis lib exists
     import redis
-
-    # check that a redis server is available
-    r = redis.Redis()
-    r.get('test')
-    del r
-
-    logger.info("Using redis backend")
 
     class Pipe:
         def __init__(self, name):
@@ -44,8 +48,7 @@ try:
         def close(self):
             self.redis.set(self.total_key, self.out_counter)
 
-
-except:
+else:
     from multiprocessing import Pipe as mp_Pipe, Value
 
     logging.info("Using multiprocessing backend")
