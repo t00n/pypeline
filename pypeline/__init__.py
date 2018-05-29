@@ -1,5 +1,6 @@
 from .core import (
     Pipeline,
+    Component,
     Map,
     Function,
     Source,
