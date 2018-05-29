@@ -1,6 +1,7 @@
 from .core import (
     Pipeline,
     Map,
+    Function,
     Source,
     Sink,
     Window,
