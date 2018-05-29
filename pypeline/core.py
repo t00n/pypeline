@@ -242,7 +242,8 @@ def run_component(component):
 
 
 class Pipeline:
-    def __init__(self):
+    def __init__(self, block=True):
+        self.block = block
         self.components = []
         self.processes = []
         self.name = uuid.uuid4()
@@ -259,18 +260,18 @@ class Pipeline:
 
     def run(self):
         for compo in self.components:
-            if not isinstance(compo, Sink):
-                p = Process(target=run_component, args=(compo,))
-                p.start()
-                self.processes.append(p)
+            p = Process(target=run_component, args=(compo,))
+            p.start()
+            self.processes.append(p)
+
+    def join(self):
         for p in self.processes:
             p.join()
-        for compo in self.components:
-            if isinstance(compo, Sink):
-                compo.run()
 
     def __enter__(self):
         return self
 
     def __exit__(self, *args):
         self.run()
+        if self.block:
+            self.join()
